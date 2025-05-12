@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask, render_template, request, redirect, session, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO, join_room, emit, leave_room
@@ -1155,12 +1158,10 @@ def delete_session(session_code):
 
 
 import os
-import eventlet
 import eventlet.wsgi
 from flask_socketio import SocketIO
 from app import app, db
 
-eventlet.monkey_patch()
 
 # Initialize SocketIO
 socketio = SocketIO(app, async_mode='eventlet')

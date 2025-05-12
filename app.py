@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, redirect, session, url_for, j
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO, join_room, emit, leave_room
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.pool import QueuePool
+
 import uuid
 import json
 import sqlite3
@@ -12,6 +14,12 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "poolclass": QueuePool,
+    "pool_size": 5,
+    "max_overflow": 10,
+    "pool_timeout": 30
+}
 
 # Initialize the database and SocketIO
 db = SQLAlchemy(app)
@@ -1145,14 +1153,20 @@ def delete_session(session_code):
 
 # Run the app
 
+
 import os
 import eventlet
 import eventlet.wsgi
-from app import app, socketio
+from flask_socketio import SocketIO
+from app import app, db
 
 eventlet.monkey_patch()
 
-# Deploy with eventlet on DigitalOcean
+# Initialize SocketIO
+socketio = SocketIO(app, async_mode='eventlet')
+
+# Deploy with socketio.run for better async support
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
-    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), app)
+    socketio.run(app, host='0.0.0.0', port=port)
+

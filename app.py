@@ -563,6 +563,7 @@ def game_page(session_code):
 
         # Get username for the player
         username = "Guest"
+        player_cards = []
         if 'user_id' in session:
             user = User.query.get(session['user_id'])
             if user:
@@ -571,14 +572,22 @@ def game_page(session_code):
         # Check if user is admin
         is_admin = session.get('is_admin', False)
 
+        # Fetch player cards from game session if it exists
+        if session_code in game_sessions:
+            game = game_sessions[session_code]
+            if username in game.hands:
+                player_cards = game.hands[username]
+
         conn.close()
         print(f"Rendering game.html for session {session_code}")
-        # Render the game page
+        
+        # Render the game page with the player's cards
         return render_template('game.html',
                                 code=session_code,
                                 session_name=session_json.get('name', 'Unnamed Session'),
                                 username=username,
-                                is_admin=is_admin)
+                                is_admin=is_admin,
+                                player_cards=player_cards)
 
     except Exception as e:
         print(f"Error in game_page route: {e}")

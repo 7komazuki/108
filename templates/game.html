@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+""{% extends "base.html" %}
 
 {% block title %}Nanatoridori Game{% endblock %}
 
@@ -16,16 +16,6 @@
             <div class="game-info">
                 <div class="session-info">Session: {{ session_name }} ({{ code }})</div>
             </div>
-            <div class="game-status">
-                <div>
-                    Current Player: <span id="current-player" class="current-turn">Waiting...</span>
-                </div>
-                <div class="player-lives">
-                    Lives:
-                    <span class="life-indicator" id="life1"></span>
-                    <span class="life-indicator" id="life2"></span>
-                </div>
-            </div>
         </div>
         
         <div class="game-board">
@@ -40,18 +30,6 @@
                     <!-- Current played cards will appear here -->
                 </div>
                 <div class="played-by" id="played-by"></div>
-                
-                <div class="game-supplies">
-                    <div class="deck-area">
-                        <div class="card-deck" id="deck"></div>
-                        <div class="deck-count" id="deck-count">Cards: 0</div>
-                    </div>
-                    
-                    <div class="discard-area">
-                        <div class="discard-pile" id="discard-pile"></div>
-                        <div class="discard-count" id="discard-count">Cards: 0</div>
-                    </div>
-                </div>
             </div>
             
             <!-- Player's Hand Area -->
@@ -60,7 +38,13 @@
                     <span class="player-name">Your Hand</span>
                     <span class="player-status" id="player-status">Waiting</span>
                 </h3>
-                <div class="cards-container" id="player-cards"></div>
+                <div class="cards-container" id="player-cards">
+                    {% for card in player_cards %}
+                        <div class="card" style="background-image: url('/static/images/card_{{ card }}.png'); background-size: cover;">
+                            <div class="card-value">{{ card }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
 
                 <div class="game-controls">
                     <button id="play-cards-btn" class="btn btn-primary btn-ripple" disabled>Play Selected Cards</button>
@@ -68,42 +52,36 @@
                     <button id="take-cards-btn" class="btn btn-success btn-ripple" disabled>Take Cards</button>
                     <button id="discard-btn" class="btn btn-danger btn-ripple" disabled>Discard Cards</button>
                 </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
 
-                {% if is_admin %}
-                <div class="admin-controls">
-                    <h4>Admin Controls</h4>
-                    <div class="admin-buttons">
-                        <button id="admin-win-btn" class="btn btn-success btn-ripple">Force Win</button>
-                        <button id="admin-loss-btn" class="btn btn-danger btn-ripple">Force Loss</button>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    
-    <!-- Game Messages -->
-    <div class="game-message" id="game-message"></div>
-    
-    <!-- Game Over Modal -->
-    <div class="modal-backdrop" id="game-over-modal">
-        <div class="modal game-over-modal">
-            <div class="modal-header">
-                <h3>Game Over</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="winner-display" id="winner-display">Player 1 Wins!</div>
-                <div class="final-scores" id="final-scores">
-                    <!-- Will be populated dynamically -->
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" id="new-game-btn">New Game</button>
-                <button class="btn btn-secondary" id="exit-btn">Exit</button>
-            </div>
-        </div>
-    </div>
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const socket = io();
+        const playerCardsContainer = document.getElementById('player-cards');
+        const playCardsBtn = document.getElementById('play-cards-btn');
+
+        // Enable selection of cards
+        playerCardsContainer.addEventListener('click', function(event) {
+            if (event.target.classList.contains('card')) {
+                event.target.classList.toggle('selected');
+                playCardsBtn.disabled = playerCardsContainer.querySelectorAll('.card.selected').length === 0;
+            }
+        });
+
+        // Play cards event
+        playCardsBtn.addEventListener('click', function() {
+            const selectedCards = [...playerCardsContainer.querySelectorAll('.card.selected')];
+            const cardValues = selectedCards.map(card => card.querySelector('.card-value').innerText);
+            console.log('Playing cards:', cardValues);
+            // Emit play event to the server
+            socket.emit('play_card', { cards: cardValues });
+        });
+    });
+</script>
 {% endblock %}
 
 {% block scripts %}
@@ -143,9 +121,17 @@
         
         // Handle game updates from the server
         socket.on('game_update', function(data) {
-            console.log('Game update received:', data);
-            gameState = data;
-            updateGameState(data);
+            if (data.hands && data.hands[playerName]) {
+                playerCardsContainer.innerHTML = ''; // Clear current cards
+                data.hands[playerName].forEach(card => {
+                    const cardElement = document.createElement('div');
+                    cardElement.className = 'card';
+                    cardElement.style.backgroundImage = `url('/static/images/card_${card}.png')`;
+                    cardElement.style.backgroundSize = 'cover';
+                    cardElement.innerHTML = `<div class="card-value">${card}</div>`;
+                    playerCardsContainer.appendChild(cardElement);
+                });
+            }
         });
         
         // Handle errors

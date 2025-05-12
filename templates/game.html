@@ -1,0 +1,695 @@
+{% extends "base.html" %}
+
+{% block title %}Nanatoridori Game{% endblock %}
+
+{% block extra_head %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
+{% endblock %}
+
+{% block content %}
+    <div class="game-container card-element">
+        <div class="game-header">
+            <div class="header-top">
+                <h1>Nanatoridori Game</h1>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-danger leave-btn">Leave Session</a>
+            </div>
+            <div class="game-info">
+                <div class="session-info">Session: {{ session_name }} ({{ code }})</div>
+            </div>
+            <div class="game-status">
+                <div>
+                    Current Player: <span id="current-player" class="current-turn">Waiting...</span>
+                </div>
+                <div class="player-lives">
+                    Lives:
+                    <span class="life-indicator" id="life1"></span>
+                    <span class="life-indicator" id="life2"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-board">
+            <!-- Other Players Area -->
+            <div id="opponents-area">
+                <!-- Will be populated dynamically -->
+            </div>
+            
+            <!-- Center Play Area -->
+            <div class="play-area">
+                <div class="current-play" id="current-play">
+                    <!-- Current played cards will appear here -->
+                </div>
+                <div class="played-by" id="played-by"></div>
+                
+                <div class="game-supplies">
+                    <div class="deck-area">
+                        <div class="card-deck" id="deck"></div>
+                        <div class="deck-count" id="deck-count">Cards: 0</div>
+                    </div>
+                    
+                    <div class="discard-area">
+                        <div class="discard-pile" id="discard-pile"></div>
+                        <div class="discard-count" id="discard-count">Cards: 0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Player's Hand Area -->
+            <div class="player-area" id="player-hand">
+                <h3>
+                    <span class="player-name">Your Hand</span>
+                    <span class="player-status" id="player-status">Waiting</span>
+                </h3>
+                <div class="cards-container" id="player-cards"></div>
+
+                <div class="game-controls">
+                    <button id="play-cards-btn" class="btn btn-primary btn-ripple" disabled>Play Selected Cards</button>
+                    <button id="pass-btn" class="btn btn-secondary btn-ripple" disabled>Pass Turn</button>
+                    <button id="take-cards-btn" class="btn btn-success btn-ripple" disabled>Take Cards</button>
+                    <button id="discard-btn" class="btn btn-danger btn-ripple" disabled>Discard Cards</button>
+                </div>
+
+                {% if is_admin %}
+                <div class="admin-controls">
+                    <h4>Admin Controls</h4>
+                    <div class="admin-buttons">
+                        <button id="admin-win-btn" class="btn btn-success btn-ripple">Force Win</button>
+                        <button id="admin-loss-btn" class="btn btn-danger btn-ripple">Force Loss</button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Game Messages -->
+    <div class="game-message" id="game-message"></div>
+    
+    <!-- Game Over Modal -->
+    <div class="modal-backdrop" id="game-over-modal">
+        <div class="modal game-over-modal">
+            <div class="modal-header">
+                <h3>Game Over</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="winner-display" id="winner-display">Player 1 Wins!</div>
+                <div class="final-scores" id="final-scores">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="new-game-btn">New Game</button>
+                <button class="btn btn-secondary" id="exit-btn">Exit</button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Connect to Socket.io
+        const socket = io();
+        
+        // Game elements
+        const currentPlayerDisplay = document.getElementById('current-player');
+        const playerCardsContainer = document.getElementById('player-cards');
+        const currentPlayArea = document.getElementById('current-play');
+        const playedByDisplay = document.getElementById('played-by');
+        const opponentsArea = document.getElementById('opponents-area');
+        const deckCount = document.getElementById('deck-count');
+        const discardCount = document.getElementById('discard-count');
+        const playerStatus = document.getElementById('player-status');
+        const lifeIndicators = [document.getElementById('life1'), document.getElementById('life2')];
+        const gameMessage = document.getElementById('game-message');
+        
+        // Buttons
+        const playCardsBtn = document.getElementById('play-cards-btn');
+        const passBtn = document.getElementById('pass-btn');
+        const takeCardsBtn = document.getElementById('take-cards-btn');
+        const discardBtn = document.getElementById('discard-btn');
+        
+        // Game state variables
+        let gameState = null;
+        let selectedCardIndices = [];
+        let playerName = '{{ username }}'; // Set from the template
+        let sessionId = '{{ code }}'; // Session code from the template
+
+        // Join the game session when the page loads
+        console.log('Joining game session:', sessionId, 'as player:', playerName);
+        socket.emit('join_game', { session_id: sessionId, player_name: playerName, room: sessionId });
+        
+        // Handle game updates from the server
+        socket.on('game_update', function(data) {
+            console.log('Game update received:', data);
+            gameState = data;
+            updateGameState(data);
+        });
+        
+        // Handle errors
+        socket.on('error', function(data) {
+            showGameMessage(data.message);
+        });
+        
+        // Handle user joining
+        socket.on('user_joined', function(data) {
+            showGameMessage(`${data.player} joined the game`);
+        });
+
+        // Handle user leaving
+        socket.on('player_left', function(data) {
+            showGameMessage(data.message);
+        });
+        
+        // Handle card drawn notification
+        socket.on('card_drawn', function(data) {
+            showGameMessage(data.message);
+        });
+        
+        // Handle cards taken notification
+        socket.on('cards_taken', function(data) {
+            showGameMessage(data.message);
+        });
+        
+        // Handle cards discarded notification
+        socket.on('cards_discarded', function(data) {
+            showGameMessage(data.message);
+        });
+        
+        // Handle table update notification
+        socket.on('table_update', function(data) {
+            if (data.message) {
+                showGameMessage(data.message);
+            }
+        });
+        
+        // Handle game restart
+        socket.on('game_restart', function(data) {
+            showGameMessage(data.message);
+            // Reset selected cards
+            selectedCardIndices = [];
+
+            // Close game over modal if it's open
+            const gameOverModal = document.getElementById('game-over-modal');
+            if (gameOverModal.classList.contains('active')) {
+                gameOverModal.classList.remove('active');
+
+                // Also reset winner display
+                const winnerDisplay = document.getElementById('winner-display');
+                if (winnerDisplay) {
+                    winnerDisplay.textContent = '';
+                    winnerDisplay.style.color = '';
+                    winnerDisplay.style.fontSize = '';
+                    winnerDisplay.style.fontWeight = '';
+                    winnerDisplay.style.animation = '';
+                }
+            }
+        });
+
+        // Admin action handler
+        socket.on('admin_action', function(data) {
+            showGameMessage(data.message);
+        });
+
+        // Function to show game message
+        function showGameMessage(message) {
+            const messageElement = document.getElementById('game-message');
+            messageElement.textContent = message;
+            messageElement.classList.add('visible');
+            
+            setTimeout(() => {
+                messageElement.classList.remove('visible');
+            }, 3000);
+        }
+        
+        // Function to update the UI based on the current game state
+        function updateGameState(state) {
+            if (!state || !state.hands) {
+                showGameMessage("Waiting for game data...");
+                return;
+            }
+            
+            // Update current player
+            if (state.current_player) {
+                currentPlayerDisplay.textContent = state.current_player;
+                
+                // Highlight if it's the player's turn
+                if (state.current_player === playerName) {
+                    playerStatus.textContent = "Your Turn";
+                    playerStatus.className = "player-status active";
+                    currentPlayerDisplay.classList.add('active');
+                    
+                    // Enable action buttons
+                    playCardsBtn.disabled = false;
+                    passBtn.disabled = false;
+                } else {
+                    playerStatus.textContent = "Waiting";
+                    playerStatus.className = "player-status waiting";
+                    currentPlayerDisplay.classList.remove('active');
+                    
+                    // Disable action buttons when not player's turn
+                    playCardsBtn.disabled = true;
+                    passBtn.disabled = true;
+                }
+            }
+            
+            // Update player lives
+            if (state.lives && state.lives[playerName]) {
+                const lives = state.lives[playerName];
+                lifeIndicators.forEach((indicator, index) => {
+                    if (index < lives) {
+                        indicator.classList.remove('lost');
+                    } else {
+                        indicator.classList.add('lost');
+                    }
+                });
+            }
+            
+            // Update deck and discard counts
+            if (state.deck_count !== undefined) {
+                deckCount.textContent = `Cards: ${state.deck_count}`;
+            }
+            
+            if (state.discard_count !== undefined) {
+                discardCount.textContent = `Cards: ${state.discard_count}`;
+            }
+            
+            // Update current play area
+            if (state.current_play && state.current_play.cards) {
+                currentPlayArea.innerHTML = '';
+                state.current_play.cards.forEach(card => {
+                    const cardElement = createCardElement(card, false);
+                    currentPlayArea.appendChild(cardElement);
+                });
+                
+                if (state.current_play.player) {
+                    playedByDisplay.textContent = `Played by: ${state.current_play.player}`;
+                    
+                    // Enable take cards button if valid
+                    if (state.current_player === playerName && state.current_play.player !== playerName) {
+                        takeCardsBtn.disabled = false;
+                        discardBtn.disabled = false;
+                    } else {
+                        takeCardsBtn.disabled = true;
+                        discardBtn.disabled = true;
+                    }
+                }
+            } else {
+                currentPlayArea.innerHTML = '';
+                playedByDisplay.textContent = '';
+                takeCardsBtn.disabled = true;
+                discardBtn.disabled = true;
+            }
+            
+            // Update player's hand
+            if (state.hands && state.hands[playerName]) {
+                playerCardsContainer.innerHTML = '';
+                const playerCards = state.hands[playerName];
+                
+                if (Array.isArray(playerCards)) {
+                    playerCards.forEach((card, index) => {
+                        const cardElement = createCardElement(card, true, index);
+                        playerCardsContainer.appendChild(cardElement);
+                    });
+                    
+                    // Add card selection logic
+                    addCardSelectionHandlers();
+                }
+            }
+            
+            // Update opponents area
+            updateOpponents(state);
+            
+            // Check for game over
+            if (state.game_over) {
+                showGameOver(state);
+            }
+        }
+        
+        // Function to update opponents area
+        function updateOpponents(state) {
+            if (!state.hands) return;
+            
+            opponentsArea.innerHTML = '';
+            
+            for (const [player, cards] of Object.entries(state.hands)) {
+                if (player !== playerName) {
+                    const opponentElement = document.createElement('div');
+                    opponentElement.className = 'player-area';
+                    
+                    // Highlight active player
+                    if (state.current_player === player) {
+                        opponentElement.classList.add('active');
+                    }
+                    
+                    const opponentHeader = document.createElement('h3');
+                    opponentHeader.innerHTML = `
+                        <span class="player-name">${player}</span>
+                        <span class="player-status ${state.current_player === player ? 'active' : 'waiting'}">
+                            ${state.current_player === player ? 'Playing' : 'Waiting'}
+                        </span>
+                    `;
+                    opponentElement.appendChild(opponentHeader);
+                    
+                    const cardsContainer = document.createElement('div');
+                    cardsContainer.className = 'cards-container';
+                    
+                    // Create face-down cards for opponent
+                    if (Array.isArray(cards)) {
+                        cards.forEach(() => {
+                            const cardElement = document.createElement('div');
+                            cardElement.className = 'card card-back';
+                            cardsContainer.appendChild(cardElement);
+                        });
+                    }
+                    
+                    opponentElement.appendChild(cardsContainer);
+                    opponentsArea.appendChild(opponentElement);
+                }
+            }
+        }
+        
+        // Function to create a card element
+        function createCardElement(value, selectable = false, index = -1) {
+            const cardElement = document.createElement('div');
+            cardElement.className = 'card';
+            cardElement.dataset.value = value;
+            
+            if (selectable) {
+                cardElement.dataset.selectable = true;
+                cardElement.dataset.index = index;
+            }
+            
+            const cardValue = document.createElement('div');
+            cardValue.className = 'card-value';
+            cardValue.textContent = value;
+            
+            cardElement.appendChild(cardValue);
+            return cardElement;
+        }
+        
+        // Add click handlers for card selection
+        function addCardSelectionHandlers() {
+            const selectableCards = document.querySelectorAll('.card[data-selectable="true"]');
+            
+            selectableCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    const cardIndex = parseInt(this.dataset.index);
+                    
+                    if (this.classList.contains('selected')) {
+                        this.classList.remove('selected');
+                        // Add a visual indicator for selection removal
+                        this.style.transform = '';
+                        selectedCardIndices = selectedCardIndices.filter(idx => idx !== cardIndex);
+                    } else {
+                        this.classList.add('selected');
+                        // Add a visual indicator for selection
+                        this.style.transform = 'translateY(-20px)';
+                        selectedCardIndices.push(cardIndex);
+                    }
+                    
+                    // Sort selected card indices
+                    selectedCardIndices.sort((a, b) => a - b);
+                    
+                    // Enable/disable play button based on selection
+                    playCardsBtn.disabled = selectedCardIndices.length === 0;
+                    
+                    // Check if selected cards are all the same value
+                    const isValidSelection = validateSelectedCards();
+                    if (!isValidSelection) {
+                        playCardsBtn.disabled = true;
+                    }
+                });
+            });
+        }
+        
+        // Validate that selected cards all have the same value and are adjacent
+        function validateSelectedCards() {
+            if (selectedCardIndices.length === 0) return false;
+            if (!gameState || !gameState.hands || !gameState.hands[playerName]) return false;
+            
+            const playerCards = gameState.hands[playerName];
+            const selectedValues = selectedCardIndices.map(idx => playerCards[idx]);
+            
+            // Check if all same value
+            const firstValue = selectedValues[0];
+            const allSameValue = selectedValues.every(v => v === firstValue);
+            
+            // Check if indices are adjacent
+            let isAdjacent = true;
+            for (let i = 0; i < selectedCardIndices.length - 1; i++) {
+                if (selectedCardIndices[i + 1] - selectedCardIndices[i] !== 1) {
+                    isAdjacent = false;
+                    break;
+                }
+            }
+            
+            return allSameValue && isAdjacent;
+        }
+        
+        // Function to handle playing cards
+        playCardsBtn.addEventListener('click', function() {
+            if (selectedCardIndices.length > 0) {
+                socket.emit('play_card', { 
+                    player: playerName, 
+                    card_indices: selectedCardIndices,
+                    room: sessionId
+                });
+                
+                // Show animation for played cards
+                const selectedElements = document.querySelectorAll('.card.selected');
+                selectedElements.forEach(card => {
+                    card.classList.add('played');
+                    card.classList.remove('selected');
+                });
+                
+                // Clear selection
+                selectedCardIndices = [];
+                
+                // Disable buttons until next update
+                playCardsBtn.disabled = true;
+                passBtn.disabled = true;
+            }
+        });
+        
+        // Function to handle passing turn
+        passBtn.addEventListener('click', function() {
+            socket.emit('pass_turn', { 
+                player: playerName,
+                room: sessionId
+            });
+            
+            // Show pass notification
+            showGameMessage(`${playerName} passes`);
+            playerStatus.textContent = "Passed";
+            playerStatus.className = "player-status passed";
+            
+            // Disable buttons
+            playCardsBtn.disabled = true;
+            passBtn.disabled = true;
+        });
+        
+        // Function to handle taking cards
+        takeCardsBtn.addEventListener('click', function() {
+            socket.emit('take_cards', { 
+                player: playerName,
+                room: sessionId
+            });
+            takeCardsBtn.disabled = true;
+            discardBtn.disabled = true;
+        });
+        
+        // Function to handle discarding cards
+        discardBtn.addEventListener('click', function() {
+            socket.emit('discard_cards', { 
+                player: playerName,
+                room: sessionId
+            });
+            takeCardsBtn.disabled = true;
+            discardBtn.disabled = true;
+        });
+        
+        // Function to handle game over
+        function showGameOver(state) {
+            const gameOverModal = document.getElementById('game-over-modal');
+            const winnerDisplay = document.getElementById('winner-display');
+            const finalScores = document.getElementById('final-scores');
+
+            // Display winner
+            if (state.winner) {
+                winnerDisplay.textContent = `${state.winner} Wins!`;
+
+                // Highlight the winner with special styling
+                winnerDisplay.style.color = '#2A9D8F';
+                winnerDisplay.style.fontSize = '1.5rem';
+                winnerDisplay.style.fontWeight = 'bold';
+
+                // Add animation
+                winnerDisplay.style.animation = 'pulse 2s infinite';
+            } else {
+                winnerDisplay.textContent = `Game Over!`;
+            }
+
+            // Display final scores/stats
+            finalScores.innerHTML = '';
+            if (state.lives) {
+                for (const [player, lives] of Object.entries(state.lives)) {
+                    const scoreElement = document.createElement('div');
+                    scoreElement.className = 'player-score';
+
+                    // Add winner highlight
+                    if (state.winner === player) {
+                        scoreElement.classList.add('winner');
+                    }
+
+                    scoreElement.innerHTML = `
+                        <span class="name">${player}</span>
+                        <span class="score">Lives: ${lives}</span>
+                    `;
+                    finalScores.appendChild(scoreElement);
+                }
+            }
+
+            // Show modal
+            gameOverModal.classList.add('active');
+            
+            // Add event listeners for buttons
+            document.getElementById('new-game-btn').addEventListener('click', function() {
+                // Start a new game
+                socket.emit('new_game', { room: sessionId });
+
+                // Close the modal automatically
+                gameOverModal.classList.remove('active');
+
+                // Clear winner display
+                winnerDisplay.textContent = '';
+                winnerDisplay.style.color = '';
+                winnerDisplay.style.fontSize = '';
+                winnerDisplay.style.fontWeight = '';
+                winnerDisplay.style.animation = '';
+            });
+
+            document.getElementById('exit-btn').addEventListener('click', function() {
+                // Notify the server that this player is exiting
+                socket.emit('player_exit', {
+                    player: playerName,
+                    room: sessionId
+                });
+
+                // Redirect to dashboard
+                window.location.href = "{{ url_for('dashboard') }}";
+            });
+
+            // Close button
+            const closeBtn = gameOverModal.querySelector('.modal-close');
+            closeBtn.addEventListener('click', function() {
+                gameOverModal.classList.remove('active');
+            });
+        }
+        
+        // Handle drag and drop for cards (optional enhancement)
+        const playArea = document.querySelector('.play-area');
+        
+        if (playArea) {
+            // Make cards draggable
+            function makeDraggable(cards) {
+                cards.forEach(card => {
+                    card.draggable = true;
+                    
+                    card.addEventListener('dragstart', function(e) {
+                        e.dataTransfer.setData('text/plain', this.dataset.index);
+                        setTimeout(() => {
+                            card.classList.add('dragging');
+                        }, 0);
+                    });
+                    
+                    card.addEventListener('dragend', function() {
+                        card.classList.remove('dragging');
+                    });
+                });
+            }
+            
+            // Set up drop area
+            playArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('drop-highlight');
+            });
+            
+            playArea.addEventListener('dragleave', function() {
+                this.classList.remove('drop-highlight');
+            });
+            
+            playArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drop-highlight');
+                
+                const cardIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                if (!isNaN(cardIndex) && gameState && gameState.current_player === playerName) {
+                    socket.emit('play_card', { 
+                        player: playerName, 
+                        card_indices: [cardIndex],
+                        room: sessionId
+                    });
+                }
+            });
+            
+            // Initialize draggable cards when they're created
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'childList' && mutation.target.id === 'player-cards') {
+                        const draggableCards = document.querySelectorAll('#player-cards .card[data-selectable="true"]');
+                        makeDraggable(draggableCards);
+                    }
+                });
+            });
+            
+            observer.observe(playerCardsContainer, { childList: true });
+        }
+        
+        // Admin event handlers
+        {% if is_admin %}
+        const adminWinBtn = document.getElementById('admin-win-btn');
+        const adminLossBtn = document.getElementById('admin-loss-btn');
+
+        // Admin force win
+        adminWinBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to force a win for yourself? This is an admin action.')) {
+                socket.emit('admin_force_win', {
+                    player: playerName,
+                    room: sessionId,
+                    admin_password: '5507'
+                });
+            }
+        });
+
+        // Admin force loss
+        adminLossBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to force a loss for yourself? This is an admin action.')) {
+                socket.emit('admin_force_loss', {
+                    player: playerName,
+                    room: sessionId,
+                    admin_password: '5507'
+                });
+            }
+        });
+        {% endif %}
+
+        // Handle connection issues
+        socket.on('connect_error', function() {
+            showGameMessage('Connection error. Trying to reconnect...');
+        });
+
+        socket.on('disconnect', function() {
+            showGameMessage('Disconnected from server');
+        });
+
+        socket.on('reconnect', function() {
+            showGameMessage('Reconnected to server');
+            // Rejoin game
+            socket.emit('join_game', { session_id: sessionId, player_name: playerName, room: sessionId });
+        });
+    });
+</script>
+{% endblock %}

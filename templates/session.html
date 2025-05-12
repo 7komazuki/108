@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Join Session{% endblock %}
+
+{% block content %}
+    <div class="logo logo-medium">
+        <img src="{{ url_for('static', filename='images/logo_en.webp') }}" alt="Site Logo">
+    </div>
+
+    <div class="form-box">
+        <h2>Join a Session</h2>
+        {% if error %}
+            <div class="error-message">{{ error }}</div>
+        {% endif %}
+        {% if session_info %}
+            <div class="session-info">
+                <h3>{{ session_info.name }}</h3>
+                {% if session_info.description %}
+                    <p class="session-description">{{ session_info.description }}</p>
+                {% endif %}
+                <p class="session-id">Session ID: {{ session_info.code }}</p>
+            </div>
+            <form method="POST" action="{{ url_for('verify_session_password') }}">
+                <input type="hidden" name="session_id" value="{{ session_info.code }}">
+                <div class="form-group">
+                    <input type="password" name="password" placeholder="Enter Session Password" required>
+                </div>
+                <div class="form-actions-vertical">
+                    <button type="submit" class="btn btn-primary action-button">Join Session</button>
+                </div>
+            </form>
+        {% else %}
+            <form method="POST">
+                <div class="form-group">
+                    <input type="text" name="session_id" placeholder="Enter Session ID" required>
+                </div>
+                <div class="form-actions-vertical">
+                    <button type="submit" class="btn btn-primary action-button">Find Session</button>
+                </div>
+            </form>
+        {% endif %}
+        <div class="form-actions-vertical">
+            <a href="{{ url_for('session_list') }}" class="btn btn-primary action-button">Browse Sessions</a>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary action-button">Back to Dashboard</a>
+        </div>
+    </div>
+{% endblock %}

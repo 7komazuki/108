@@ -1,0 +1,314 @@
+/* Card Styling for Nanatoridori Game */
+
+/* Base Card Styles */
+.card {
+    width: 90px;
+    height: 130px;
+    background-color: white;
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                box-shadow 0.3s ease;
+    border: 3px solid white;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+}
+
+/* Card Value Display */
+.card-value {
+    opacity: 0;  /* Hide the text value since we're using images */
+    position: absolute;
+    z-index: 2;
+}
+
+/* Card Images by Value */
+.card[data-value="1"] {
+    border-color: #E63946;
+    background: url('../images/card_1.png') center center/cover no-repeat;
+}
+
+.card[data-value="2"] {
+    border-color: #F77F00;
+    background: url('../images/card_2.png') center center/cover no-repeat;
+}
+
+.card[data-value="3"] {
+    border-color: #FCBF49;
+    background: url('../images/card_3.png') center center/cover no-repeat;
+}
+
+.card[data-value="4"] {
+    border-color: #2A9D8F;
+    background: url('../images/card_4.png') center center/cover no-repeat;
+}
+
+.card[data-value="5"] {
+    border-color: #577590;
+    background: url('../images/card_5.png') center center/cover no-repeat;
+}
+
+.card[data-value="6"] {
+    border-color: #3D5A80;
+    background: url('../images/card_6.png') center center/cover no-repeat;
+}
+
+.card[data-value="7"] {
+    border-color: #8338EC;
+    background: url('../images/card_7.png') center center/cover no-repeat;
+}
+
+/* Card Hover Effects */
+.card:hover {
+    transform: translateY(-10px) rotate(2deg);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.2);
+    z-index: 5;
+}
+
+/* Selected Card */
+.card.selected {
+    transform: translateY(-25px);
+    box-shadow: 0 15px 25px rgba(0, 0, 0, 0.4);
+    border: 3px solid #2A9D8F;
+    z-index: 10;
+}
+
+/* Card Animations */
+@keyframes deal-card {
+    0% {
+        transform: translateY(-100px) translateX(50px) rotate(10deg);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0) translateX(0) rotate(0);
+        opacity: 1;
+    }
+}
+
+@keyframes flip-card {
+    0% {
+        transform: rotateY(0deg);
+    }
+    50% {
+        transform: rotateY(90deg);
+    }
+    100% {
+        transform: rotateY(0deg);
+    }
+}
+
+@keyframes play-card {
+    0% {
+        transform: translateY(0) rotate(0);
+    }
+    50% {
+        transform: translateY(-50px) rotate(-5deg);
+    }
+    100% {
+        transform: translateY(200px) rotate(5deg);
+        opacity: 0;
+    }
+}
+
+@keyframes draw-card {
+    0% {
+        transform: translateY(-50px) scale(0.8);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes shake-card {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-5px); }
+    40%, 80% { transform: translateX(5px); }
+}
+
+/* Animation Classes */
+.card.dealt {
+    animation: deal-card 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.card.flipped {
+    animation: flip-card 0.6s ease forwards;
+}
+
+.card.played {
+    animation: play-card 1s ease forwards;
+    pointer-events: none;
+}
+
+.card.drawn {
+    animation: draw-card 0.5s ease forwards;
+}
+
+.card.invalid {
+    animation: shake-card 0.5s ease;
+    border-color: #E63946;
+}
+
+/* Card Container/Hand Styles */
+.cards-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    position: relative;
+    padding: 1.5rem 0;
+    min-height: 180px;
+}
+
+/* Staggered Card Dealing */
+.cards-container .card:nth-child(1) { animation-delay: 0.1s; }
+.cards-container .card:nth-child(2) { animation-delay: 0.2s; }
+.cards-container .card:nth-child(3) { animation-delay: 0.3s; }
+.cards-container .card:nth-child(4) { animation-delay: 0.4s; }
+.cards-container .card:nth-child(5) { animation-delay: 0.5s; }
+.cards-container .card:nth-child(6) { animation-delay: 0.6s; }
+.cards-container .card:nth-child(7) { animation-delay: 0.7s; }
+
+/* Card Back */
+.card-back {
+    background: url('../images/card_8.png') center/cover no-repeat;
+    color: transparent;
+}
+
+/* Card Deck */
+.card-deck {
+    width: 90px;
+    height: 130px;
+    position: relative;
+    margin: 1rem auto;
+}
+
+.card-deck::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('../images/card_8.png') center/cover no-repeat;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
+.card-deck::after {
+    content: "Deck";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: bold;
+    z-index: 2;
+}
+
+/* Discard Pile */
+.discard-pile {
+    width: 90px;
+    height: 130px;
+    position: relative;
+    margin: 1rem auto;
+    border: 3px dashed #ccc;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+.discard-pile::before {
+    content: "Discard";
+    color: #777;
+    font-size: 0.7rem;
+}
+
+.discard-pile.has-cards::before {
+    content: "";
+}
+
+/* Card Dragging Support */
+.card.dragging {
+    opacity: 0.8;
+    transform: rotate(5deg) scale(1.05);
+    z-index: 1000;
+}
+
+/* Small Card for Profile Page */
+.card-small {
+    width: 70px;
+    height: 100px;
+    border-width: 2px;
+}
+
+/* Responsive Card Sizing */
+@media (max-width: 768px) {
+    .card {
+        width: 50px;
+        height: 75px;
+    }
+
+    .card-value {
+        font-size: 1.2rem;
+    }
+
+    .cards-container {
+        justify-content: center;
+    }
+
+    .card-small {
+        width: 40px;
+        height: 60px;
+    }
+}
+
+@media (max-width: 480px) {
+    .card {
+        width: 40px;
+        height: 60px;
+    }
+
+    .card-value {
+        font-size: 1rem;
+    }
+
+    .card-small {
+        width: 35px;
+        height: 50px;
+    }
+}
+
+/* Card Sets/Groups */
+.card-set {
+    display: flex;
+    gap: 0.1rem;
+    margin: 0.5rem;
+    position: relative;
+}
+
+.card-set .card {
+    margin-right: -15px;
+}
+
+.card-set .card:last-child {
+    margin-right: 0;
+}
+
+/* Card Placeholder for Drag and Drop */
+.card-placeholder {
+    width: 60px;
+    height: 90px;
+    border: 2px dashed #aaa;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.5);
+}

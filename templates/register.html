@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block navbar %}
+<!-- Navigation bar hidden on register page -->
+{% endblock %}
+
+{% block footer %}
+<!-- Footer is hidden on register page -->
+{% endblock %}
+
+{% block content %}
+    <div class="logo logo-medium">
+        <img src="{{ url_for('static', filename='images/logo_en.webp') }}" alt="Site Logo">
+    </div>
+
+    <div class="form-box">
+        <h2>Register</h2>
+        {% if error %}
+            <div class="error-message">{{ error }}</div>
+        {% endif %}
+        <form method="POST">
+            <input type="text" name="username" placeholder="Username" required><br>
+            <input type="email" name="email" placeholder="Email" required><br>
+            <input type="password" name="password" placeholder="Password" required><br>
+            <input type="password" name="confirm_password" placeholder="Confirm Password" required><br>
+            <input type="submit" value="Register">
+        </form>
+        <div class="link-container">
+            Already have an account? <a href="{{ url_for('login') }}">Login here</a>
+            <br><br>
+            <a href="{{ url_for('landing') }}" class="btn-text">Back to Home</a>
+        </div>
+    </div>
+    
+    <div class="copyright-subtle">
+        &copy; 2023 Nanatoridori Game. All rights reserved.
+    </div>
+{% endblock %}

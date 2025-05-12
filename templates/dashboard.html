@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Nanatoridori{% endblock %}
+
+{% block content %}
+<div class="logo logo-small">
+    <img src="{{ url_for('static', filename='images/logo_en.webp') }}" alt="Site Logo">
+</div>
+
+<div class="dashboard-container">
+    <h1>Welcome, {{ user.username }}!</h1>
+    
+    <div class="dashboard-options">
+        <div class="option-card host">
+            <h2>Host a Session</h2>
+            <p>Create a new game session and invite friends</p>
+            <a href="{{ url_for('create_session') }}" class="btn btn-primary">Host Now</a>
+        </div>
+        
+        <div class="option-card join">
+            <h2>Join a Session</h2>
+            <p>Enter a session code to join an existing game</p>
+            <a href="{{ url_for('join') }}" class="btn btn-secondary">Join Now</a>
+        </div>
+    </div>
+    
+    {% if recent_sessions %}
+    <div class="recent-sessions">
+        <h3>Your Recent Sessions</h3>
+        <ul class="session-list">
+            {% for session in recent_sessions %}
+            <li>
+                <span class="session-id">{{ session.session_code }}</span>
+                <a href="{{ url_for('session_page', session_code=session.session_code) }}" class="btn btn-small">Rejoin</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    <div class="dashboard-navigation">
+        <a href="{{ url_for('session_list') }}" class="btn btn-info">Browse All Sessions</a>
+        <a href="{{ url_for('account') }}" class="btn btn-secondary">Account Settings</a>
+        {% if session.get('is_admin', False) %}
+        <div class="admin-status">
+            <span class="admin-badge">Admin Mode Active</span>
+            <p>You can now delete any game session</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

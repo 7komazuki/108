@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Nanatoridori{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/logo.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/buttons.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/cards.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modals.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/gameboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/account-dashboard.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% block navbar %}
+    {% if session.get('user_id') %}
+    <nav>
+        <div class="nav-left">
+            <a href="{{ url_for('dashboard') }}">Home</a>
+        </div>
+        <div class="nav-right">
+            <a href="{{ url_for('account') }}">Account</a>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+    </nav>
+    {% endif %}
+    {% endblock %}
+    
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+    
+    {% block footer %}
+    <footer>
+        <p>&copy; 2023 Nanatoridori Game. All rights reserved.</p>
+    </footer>
+    {% endblock %}
+
+    <!-- Toast container for notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    {% block scripts %}
+    <script>
+        // Common functions for all pages
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize tooltips
+            const tooltips = document.querySelectorAll('.tooltip');
+            
+            // Card animation for any cards on the page
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                card.classList.add('dealt');
+            });
+        });
+
+        // Toast notification function
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+                <span>${message}</span>
+                <button class="toast-close">&times;</button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Remove toast after 5 seconds or when closed
+            const closeBtn = toast.querySelector('.toast-close');
+            closeBtn.addEventListener('click', () => {
+                toast.remove();
+            });
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
+    </script>
+    {% endblock %}
+</body>
+</html>

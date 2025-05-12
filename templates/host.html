@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Host a Game Session{% endblock %}
+
+{% block content %}
+<div class="logo logo-small">
+    <img src="{{ url_for('static', filename='images/logo_en.webp') }}" alt="Site Logo">
+</div>
+
+<div class="form-box wide-form">
+    <h2>Host a New Game Session</h2>
+    {% if error %}
+        <div class="error-message">{{ error }}</div>
+    {% endif %}
+    
+    <form method="POST" action="{{ url_for('create_session') }}">
+        <div class="form-group">
+            <label for="session_name">Session Name</label>
+            <input type="text" id="session_name" name="session_name" placeholder="My Awesome Game" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" placeholder="Enter a description for your game session" rows="3"></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password (Optional)</label>
+            <input type="password" id="password" name="password" placeholder="Leave blank for no password">
+            <small class="help-text">Create a password if you want to make your session private</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="visibility">Session Visibility</label>
+            <select id="visibility" name="visibility">
+                <option value="public">Public (listed in game browser)</option>
+                <option value="private">Private (only via direct link)</option>
+            </select>
+        </div>
+
+        <!-- Vertical Layout for Buttons -->
+        <div class="form-actions-vertical">
+            <button type="submit" class="btn btn-primary action-button">Create Session</button>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary action-button cancel-button">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<!-- CSS to style the buttons -->
+<style>
+    .form-actions-vertical {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    .action-button {
+        width: 100%;
+        text-align: center;
+    }
+    .cancel-button {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        color: white;
+        text-decoration: none;
+    }
+</style>
+{% endblock %}

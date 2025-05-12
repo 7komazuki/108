@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Browse Game Sessions{% endblock %}
+
+{% block content %}
+<div class="logo logo-small">
+    <img src="{{ url_for('static', filename='images/logo_en.webp') }}" alt="Site Logo">
+</div>
+
+<div class="sessions-container">
+    <h1>Available Game Sessions</h1>
+    
+    <div class="filters">
+        <form method="GET" action="{{ url_for('session_list') }}" class="filter-form">
+            <div class="search-box">
+                <input type="text" name="search" placeholder="Search sessions..." value="{{ search_query if search_query }}">
+                <button type="submit" class="search-btn">Search</button>
+            </div>
+        </form>
+    </div>
+    
+    {% if error %}
+        <div class="error-message">{{ error }}</div>
+    {% endif %}
+    
+    {% if sessions %}
+        <div class="sessions-list">
+            {% for session in sessions %}
+                <div class="session-card">
+                    <div class="session-details">
+                        <h3>{{ session.name }}</h3>
+                        {% if session.description %}
+                            <p class="session-description">{{ session.description }}</p>
+                        {% endif %}
+                        <p class="session-meta">
+                            <span class="session-date">Created: {{ session.created_at.strftime('%Y-%m-%d %H:%M') if session.created_at else 'Recently' }}</span>
+                            <span class="player-count">Players: {{ session.player_count }}</span>
+                            {% if session.has_password %}
+                                <span class="session-password">Password Protected</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="session-actions">
+                        <form method="POST" action="{{ url_for('join') }}" class="join-form">
+                            <input type="hidden" name="session_id" value="{{ session.code }}">
+                            <button type="submit" class="btn btn-primary">Join</button>
+                        </form>
+                        {% if session.can_delete %}
+                        <form method="POST" action="{{ url_for('delete_session', session_code=session.code) }}" class="delete-form" onsubmit="return confirm('Are you sure you want to delete this session?');">
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-sessions">
+            <p>No active sessions found. {% if search_query %}Try a different search term or{% endif %} create a new session!</p>
+            <div class="form-actions-vertical" style="margin-top: 15px;">
+                <a href="{{ url_for('create_session') }}" class="btn btn-primary action-button">Host New Session</a>
+            </div>
+        </div>
+    {% endif %}
+    
+    <div class="form-actions-vertical">
+        <a href="{{ url_for('join') }}" class="btn btn-primary action-button">Join via Session ID</a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary action-button">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

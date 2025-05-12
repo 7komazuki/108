@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Account Dashboard{% endblock %}
+
+{% block content %}
+    <div class="account-dashboard">
+        <div class="dashboard-header">
+            <div class="logo logo-small">
+                <img src="{{ url_for('static', filename='images/logo_en.webp') }}" alt="Site Logo">
+            </div>
+            <h1>Player Dashboard</h1>
+            {% if session.get('is_admin', False) %}
+            <div class="admin-badge">Admin Access</div>
+            {% endif %}
+        </div>
+
+        {% if error %}
+            <div class="error-message global-message">{{ error }}</div>
+        {% endif %}
+        {% if success %}
+            <div class="success-message global-message">{{ success }}</div>
+        {% endif %}
+        
+        <div class="dashboard-grid">
+            <!-- Left Column - Player Profile -->
+            <div class="profile-section dashboard-card">
+                <div class="card-header">
+                    <h2>Player Profile</h2>
+                </div>
+                <div class="profile-content">
+                    <div class="profile-avatar">
+                        <div class="avatar-circle">{{ user.username[0].upper() }}</div>
+                    </div>
+                    <div class="profile-details">
+                        <h3>{{ user.username }}</h3>
+                        <p class="user-email">{{ user.email }}</p>
+                    </div>
+                </div>
+                <div class="favorite-cards-section">
+                    <h3>Favorite Cards</h3>
+                    <div class="favorite-cards">
+                        {% for card in favorite_cards %}
+                        <div class="card card-profile" data-value="{{ card }}"></div>
+                        {% endfor %}
+                    </div>
+                    <form method="POST" action="{{ url_for('update_favorite_cards') }}" class="favorite-cards-form">
+                        <div class="form-group">
+                            <label>Update Favorite Cards:</label>
+                            <div class="card-selector">
+                                <select name="card1">
+                                    {% for i in range(1, 9) %}
+                                    <option value="{{ i }}" {% if favorite_cards[0] == i %}selected{% endif %}>Card {{ i }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select name="card2">
+                                    {% for i in range(1, 9) %}
+                                    <option value="{{ i }}" {% if favorite_cards[1] == i %}selected{% endif %}>Card {{ i }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select name="card3">
+                                    {% for i in range(1, 9) %}
+                                    <option value="{{ i }}" {% if favorite_cards[2] == i %}selected{% endif %}>Card {{ i }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-ripple">Update Cards</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Middle Column - Game Statistics -->
+            <div class="stats-section dashboard-card">
+                <div class="card-header">
+                    <h2>Game Statistics</h2>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon games-icon">🎮</div>
+                        <span class="stat-value">{{ user.games_played }}</span>
+                        <span class="stat-label">Games Played</span>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon wins-icon">🏆</div>
+                        <span class="stat-value">{{ user.wins }}</span>
+                        <span class="stat-label">Wins</span>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon losses-icon">❌</div>
+                        <span class="stat-value">{{ user.losses }}</span>
+                        <span class="stat-label">Losses</span>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon winrate-icon">📊</div>
+                        <span class="stat-value">{{ win_rate }}%</span>
+                        <span class="stat-label">Win Rate</span>
+                    </div>
+                </div>
+                
+                <div class="stats-chart">
+                    <div class="progress-bar">
+                        <div class="progress-wins" style="width: {{ win_rate }}%">
+                            <span class="progress-text">{{ win_rate }}% Win Rate</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stats-summary">
+                    {% if user.games_played > 0 %}
+                        {% if win_rate >= 70 %}
+                            <p class="rating excellent">Excellent Player!</p>
+                        {% elif win_rate >= 50 %}
+                            <p class="rating good">Good Player!</p>
+                        {% elif win_rate >= 30 %}
+                            <p class="rating average">Average Player</p>
+                        {% else %}
+                            <p class="rating novice">Novice Player</p>
+                        {% endif %}
+                    {% else %}
+                        <p class="rating new">New Player</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Right Column - Account Settings -->
+            <div class="settings-section dashboard-card">
+                <div class="card-header">
+                    <h2>Account Settings</h2>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-group">
+                        <h3>Change Password</h3>
+                        <form method="POST" action="{{ url_for('update_password') }}" class="password-form">
+                            <div class="form-row">
+                                <input type="password" name="current_password" placeholder="Current Password" required>
+                            </div>
+                            <div class="form-row">
+                                <input type="password" name="new_password" placeholder="New Password" required>
+                            </div>
+                            <div class="form-row">
+                                <input type="password" name="confirm_password" placeholder="Confirm New Password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-ripple">Update Password</button>
+                        </form>
+                    </div>
+                    
+                    {% if not session.get('is_admin', False) %}
+                    <div class="settings-group admin-section">
+                        <h3>Admin Access</h3>
+                        <form method="POST" action="{{ url_for('admin_login') }}" class="admin-form">
+                            <div class="form-row">
+                                <input type="password" name="admin_pin" placeholder="Enter Admin PIN" required>
+                            </div>
+                            <button type="submit" class="btn btn-secondary btn-ripple">Verify PIN</button>
+                        </form>
+                        {% if admin_error %}
+                            <div class="error-message">{{ admin_error }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="actions-group">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-ripple">Back to Dashboard</a>
+                        <a href="{{ url_for('session_list') }}" class="btn btn-secondary btn-ripple">Browse Sessions</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,31 @@
+/* Logo Sizing Variants */
+
+/* Large logo for landing page */
+.logo.logo-large {
+    max-width: 350px;
+    margin: 3rem auto;
+}
+
+/* Medium logo for standard pages */
+.logo.logo-medium {
+    max-width: 200px;
+    margin: 1.5rem auto;
+}
+
+/* Small logo for compact pages */
+.logo.logo-small {
+    max-width: 150px;
+    margin: 1rem auto;
+}
+
+/* Default logo size overrides from base.css */
+.logo {
+    text-align: center;
+    margin: 1.5rem auto;
+    max-width: 200px; /* Reduced from 250px */
+}
+
+/* Logo hover effect */
+.logo img:hover {
+    transform: scale(1.05);
+}

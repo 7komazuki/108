@@ -9,8 +9,8 @@ from nanatori import NanatoridoriGame, load_game, Player
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'  
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db' 
+app.config['SECRET_KEY'] = 'your_secret_key'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize the database and SocketIO
@@ -370,7 +370,7 @@ def create_session():
     # Prepare data JSON
     import json
     session_data = json.dumps({
-        "name": session_name, 
+        "name": session_name,
         "description": description,
         "password": password,
         "is_public": (visibility == 'public')
@@ -393,11 +393,11 @@ def create_session():
                 (session_code, data, description, password, created_by, is_public) 
                 VALUES (?, ?, ?, ?, ?, ?)
             ''', (
-                session_code, 
-                session_data, 
-                description, 
-                password, 
-                session.get('user_id'), 
+                session_code,
+                session_data,
+                description,
+                password,
+                session.get('user_id'),
                 1 if visibility == 'public' else 0
             ))
         else:
@@ -438,7 +438,7 @@ def session_list():
             if search_query:
                 # Search in description and data field (for the name)
                 query = query.filter(
-                    (SessionData.description.ilike(f'%{search_query}%')) | 
+                    (SessionData.description.ilike(f'%{search_query}%')) |
                     (SessionData.data.ilike(f'%{search_query}%'))
                 )
             
@@ -518,16 +518,16 @@ def session_list():
                     print(f"Error processing session data: {e}")
                     continue
             
-        return render_template('sessions_list.html', 
-                            sessions=sessions, 
+        return render_template('sessions_list.html',
+                            sessions=sessions,
                             search_query=search_query,
                             is_admin=is_admin)
                             
     except Exception as main_error:
         print(f"Error in session listing: {main_error}")
         # Complete fallback - show empty list with error message
-        return render_template('sessions_list.html', 
-                            sessions=[], 
+        return render_template('sessions_list.html',
+                            sessions=[],
                             search_query=search_query,
                             error="Could not retrieve sessions. Please try again later.")
 
@@ -1144,14 +1144,15 @@ def delete_session(session_code):
         return render_template('sessions_list.html', error=error_message)
 
 # Run the app
+
+import os
+import eventlet
+import eventlet.wsgi
+from app import app, socketio
+
+eventlet.monkey_patch()
+
+# Deploy with eventlet on DigitalOcean
 if __name__ == '__main__':
-    # First migrate the database if needed
-    print("Checking database schema...")
-    migrate_database()
-    
-    # Then create any missing tables
-    with app.app_context():
-        create_tables()
-    
-    # Run the application
-    socketio.run(app, debug=True)
+    port = int(os.environ.get('PORT', 8080))
+    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), app)

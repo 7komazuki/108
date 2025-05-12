@@ -376,16 +376,20 @@
             const cardElement = document.createElement('div');
             cardElement.className = 'card';
             cardElement.dataset.value = value;
-            
+
             if (selectable) {
                 cardElement.dataset.selectable = true;
                 cardElement.dataset.index = index;
             }
-            
+
+            // 🚀 Add this line to render the background image:
+            cardElement.style.backgroundImage = `url('/static/images/card_${value}.png')`;
+            cardElement.style.backgroundSize = 'cover';
+
             const cardValue = document.createElement('div');
             cardValue.className = 'card-value';
             cardValue.textContent = value;
-            
+
             cardElement.appendChild(cardValue);
             return cardElement;
         }
